@@ -4,6 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CoinEarn TMA</title>
+    <script>
+        /**
+         * SILENT FIX: This script prevents the "[Telegram.WebApp] CloudStorage is not supported..." 
+         * error log by providing a dummy storage interface for older Telegram versions (pre-6.9).
+         */
+        (function() {
+            var fix = function() {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    var tg = window.Telegram.WebApp;
+                    if (!tg.CloudStorage) {
+                        var noop = function(a, b, c) { if (typeof b === 'function') b(null, null); else if (typeof c === 'function') c(null, null); };
+                        tg.CloudStorage = { setItem: noop, getItem: noop, getItems: noop, removeItem: noop, removeItems: noop, getKeys: noop };
+                    }
+                }
+            };
+            fix();
+            var interval = setInterval(fix, 50);
+            setTimeout(function() { clearInterval(interval); }, 3000);
+        })();
+    </script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Ad SDK Integration -->
@@ -55,7 +75,6 @@
 </head>
 <body>
     <div id="root"></div>
-    <!-- Link the entry point script -->
     <script type="module" src="/index.tsx"></script>
 </body>
 </html>
