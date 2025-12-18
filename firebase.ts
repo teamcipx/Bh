@@ -16,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { UserData, AppSettings, WithdrawalRequest } from './types';
 
-// Updated with user provided Firebase configuration
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyCJAd3sdsoFKUcza2z-9VYlfIkm1BL4kd4",
   authDomain: "ttggg-9f560.firebaseapp.com",
@@ -29,7 +29,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 /**
- * Use long-polling to bypass potential WebSocket blocks in some network environments.
+ * Using long-polling to ensure connectivity in restricted environments like Telegram's proxy.
  */
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
@@ -61,28 +61,36 @@ export const registerUser = async (uid: string, referralCode: string | null, det
     const existing = await getUserData(uid);
     if (existing) return existing;
 
+    let initialBalance = 0;
+    let validReferrer = false;
+
+    // Dual Bonus Logic: Both get rewarded
+    if (referralCode && referralCode !== uid) {
+      const referrerRef = doc(db, 'users', referralCode);
+      const referrerSnap = await getDoc(referrerRef);
+      if (referrerSnap.exists()) {
+        validReferrer = true;
+        initialBalance = 250; // New user gets 250 coins
+        
+        // Referrer gets 500 coins bonus
+        await updateDoc(referrerRef, {
+          balance: increment(500)
+        });
+      }
+    }
+
     const newUser: UserData = {
       uid,
       firstName: details.firstName || '',
       lastName: details.lastName || '',
       username: details.username || '',
-      balance: 0,
+      balance: initialBalance,
       total_watched: 0,
-      referred_by: referralCode,
+      referred_by: validReferrer ? referralCode : null,
       createdAt: Date.now(),
     };
 
     await setDoc(doc(db, 'users', uid), newUser);
-
-    if (referralCode && referralCode !== uid) {
-      const referrerRef = doc(db, 'users', referralCode);
-      const referrerSnap = await getDoc(referrerRef);
-      if (referrerSnap.exists()) {
-        await updateDoc(referrerRef, {
-          balance: increment(500) // Initial signup bonus for referrer
-        });
-      }
-    }
     return newUser;
   } catch (error: any) {
     console.error("Firestore registerUser error:", error);
@@ -100,21 +108,24 @@ export const registerUser = async (uid: string, referralCode: string | null, det
 };
 
 export const updateAdWatch = async (uid: string, reward: number, referredBy: string | null) => {
-  const userRef = doc(db, 'users', uid);
-  await updateDoc(userRef, {
-    balance: increment(reward),
-    total_watched: increment(1)
-  });
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      balance: increment(reward),
+      total_watched: increment(1)
+    });
 
-  // Improved Referral Commission: 10% of user's ad earning goes to referrer
-  if (referredBy) {
-    const referrerRef = doc(db, 'users', referredBy);
-    const commission = Math.floor(reward * 0.1);
-    if (commission > 0) {
-      await updateDoc(referrerRef, {
-        balance: increment(commission)
-      });
+    if (referredBy) {
+      const referrerRef = doc(db, 'users', referredBy);
+      const commission = Math.floor(reward * 0.1); // 10% lifetime commission
+      if (commission > 0) {
+        await updateDoc(referrerRef, {
+          balance: increment(commission)
+        });
+      }
     }
+  } catch (err) {
+    console.error("Failed to update ad watch:", err);
   }
 };
 

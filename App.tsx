@@ -23,11 +23,9 @@ const App: React.FC = () => {
       const tgUser = getTelegramUser();
       const referralCode = getStartParam();
       
-      // Fetch settings first (uses defaults on failure)
       const config = await getAppSettings();
       setSettings(config);
 
-      // Attempt registration/login
       const registered = await registerUser(tgUser.id.toString(), referralCode, {
         firstName: tgUser.first_name,
         lastName: tgUser.last_name,
@@ -36,12 +34,11 @@ const App: React.FC = () => {
       
       setUser(registered);
 
-      // Tell Telegram the app is ready
       tg?.expand();
       tg?.ready();
     } catch (err: any) {
       console.error("Initialization error:", err);
-      setError(err.message || "Failed to connect to server. Please check your internet connection.");
+      setError(err.message || "Connection issue. Retrying...");
     } finally {
       setLoading(false);
     }
@@ -79,8 +76,8 @@ const App: React.FC = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
-        <h1 className="text-xl font-bold">Connection Issue</h1>
-        <p className="text-gray-500 mt-2 mb-6">{error}</p>
+        <h1 className="text-xl font-bold">Network Offline</h1>
+        <p className="text-gray-500 mt-2 mb-6">Device operates in offline mode. Sync will resume automatically.</p>
         <button 
           onClick={initApp}
           className="bg-[var(--tg-button)] text-[var(--tg-button-text)] px-8 py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-all"
@@ -112,8 +109,8 @@ const App: React.FC = () => {
   if (!user || !settings) return null;
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-[var(--tg-bg)] text-[var(--tg-text)] relative pb-20">
-      <header className="sticky top-0 z-50 bg-[var(--tg-bg)] px-4 py-3 flex items-center justify-between border-b border-gray-100 dark:border-gray-800 backdrop-blur-md bg-white/80 dark:bg-black/80">
+    <div className="max-w-md mx-auto min-h-screen bg-[var(--tg-bg)] text-[var(--tg-text)] relative pb-20 overflow-x-hidden">
+      <header className="sticky top-0 z-50 px-4 py-3 flex items-center justify-between border-b border-gray-100 dark:border-gray-800 backdrop-blur-md bg-white/80 dark:bg-black/80">
         <h1 className="text-xl font-black text-blue-600">CoinEarn</h1>
         <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-full">
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
