@@ -1,0 +1,6 @@
+{
+  "name": "CoinEarn Telegram Mini App",
+  "description": "A feature-rich Telegram Mini App for earning coins through ad-watching, referrals, and managing withdrawals, integrated with Firebase.",
+  "bot_username": "AdearnX_bot",
+  "requestFramePermissions": []
+}
