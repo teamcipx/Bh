@@ -13,7 +13,8 @@ import {
   where,
   orderBy,
   getDocs,
-  limit
+  limit,
+  serverTimestamp
 } from 'firebase/firestore';
 import { UserData, AppSettings, WithdrawalRequest, Message } from './types';
 
@@ -82,11 +83,9 @@ export const registerUser = async (uid: string, details: Partial<UserData>): Pro
     await setDoc(doc(db, 'users', userId), newUser);
     
     // AUTOMATED WELCOME SEQUENCE
-    const name = details.firstName || 'User';
-    await addBotMessage(userId, `🎉 Welcome to CoinEarn, ${name}!`);
-    await addBotMessage(userId, `💰 We've started you off with ${WELCOME_BONUS_BASE} coins as a welcome gift.`);
-    await addBotMessage(userId, `🚀 Quick Start Guide:\n1. Watch Ads in the Home tab to earn ${DEFAULT_SETTINGS.ad_reward} coins each.\n2. Go to the Invite tab to redeem a friend's referral code for +500 coins instantly!\n3. Reach ${DEFAULT_SETTINGS.min_withdrawal} coins to request your first payment.`);
-    await addBotMessage(userId, `🤝 If you have any questions, our support team is always here to help. Happy earning!`);
+    await addBotMessage(userId, `🎉 Welcome aboard, ${details.firstName}!`);
+    await addBotMessage(userId, `💰 I've credited ${WELCOME_BONUS_BASE} coins to your wallet to get you started.`);
+    await addBotMessage(userId, `💡 Pro Tip: Go to the 'Invite' tab and enter a friend's UID to get an extra +${REFERRAL_BONUS} coins immediately!`);
     
     return newUser;
   } catch (error: any) {
@@ -100,7 +99,7 @@ export const submitReferralCode = async (uid: string, code: string): Promise<{su
     const userId = uid.toString();
     const referrerId = code.trim();
     
-    if (referrerId === userId) return { success: false, message: "You cannot use your own code." };
+    if (referrerId === userId) return { success: false, message: "Nice try! You cannot use your own code." };
     
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
@@ -108,28 +107,50 @@ export const submitReferralCode = async (uid: string, code: string): Promise<{su
     
     const userData = userSnap.data() as UserData;
     if (userData.referred_by || userData.hasSubmittedCode) {
-      return { success: false, message: "Referral code already applied." };
+      return { success: false, message: "You've already used a code." };
     }
 
     const referrerRef = doc(db, 'users', referrerId);
     const referrerSnap = await getDoc(referrerRef);
-    if (!referrerSnap.exists()) return { success: false, message: "Invalid Referral Code. Check with your friend." };
+    if (!referrerSnap.exists()) return { success: false, message: "Invalid Code. Make sure you entered the correct UID." };
 
-    // Bonus for Referrer
-    await updateDoc(referrerRef, { balance: increment(REFERRAL_BONUS) });
-    await addBotMessage(referrerId, `💎 Referral Bonus: Someone used your code! +${REFERRAL_BONUS} Coins added.`);
+    // Update Referrer
+    await updateDoc(referrerRef, { 
+      balance: increment(REFERRAL_BONUS) 
+    });
+    await addBotMessage(referrerId, `🎊 Referral Success! A new member joined your team using your code. +${REFERRAL_BONUS} coins added.`);
 
-    // Bonus for New User
+    // Update Current User
     await updateDoc(userRef, { 
       balance: increment(REFERRAL_BONUS),
       referred_by: referrerId,
       hasSubmittedCode: true
     });
-    await addBotMessage(userId, `✅ Code Success: +${REFERRAL_BONUS} coins received for joining the team!`);
+    await addBotMessage(userId, `✅ Code accepted! You received +${REFERRAL_BONUS} coins.`);
 
-    return { success: true, message: "Referral code applied successfully!" };
+    return { success: true, message: "Referral successful! +500 Coins added." };
   } catch (e) {
-    return { success: false, message: "Submission failed. Please try again." };
+    return { success: false, message: "Connection error. Try again." };
+  }
+};
+
+export const getReferralHistory = async (uid: string): Promise<UserData[]> => {
+  try {
+    // Note: This requires a composite index in Firestore (referred_by ASC, createdAt DESC)
+    // If the index isn't ready, it will fallback to a simpler query.
+    const q = query(
+      collection(db, 'users'), 
+      where('referred_by', '==', uid.toString()), 
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(doc => doc.data() as UserData);
+  } catch (e) {
+    console.warn("Falling back to simple referral query...", e);
+    const qSimple = query(collection(db, 'users'), where('referred_by', '==', uid.toString()));
+    const snap = await getDocs(qSimple);
+    return snap.docs.map(doc => doc.data() as UserData);
   }
 };
 
@@ -141,7 +162,7 @@ export const updateAdWatch = async (uid: string, reward: number, referredBy: str
       total_watched: increment(1)
     });
     
-    await addBotMessage(uid, `✅ Ad Reward: +${reward} coins.`);
+    await addBotMessage(uid, `✅ +${reward} coins for watching an ad!`);
 
     if (referredBy) {
       const commission = Math.floor(reward * 0.1);
@@ -149,12 +170,12 @@ export const updateAdWatch = async (uid: string, reward: number, referredBy: str
         await updateDoc(doc(db, 'users', referredBy.toString()), { balance: increment(commission) });
       }
     }
-  } catch (err) { console.error("Ad update error:", err); }
+  } catch (err) { console.error(err); }
 };
 
 export const getMessages = async (uid: string): Promise<Message[]> => {
   try {
-    const q = query(collection(db, 'users', uid.toString(), 'messages'), orderBy('timestamp', 'desc'), limit(50));
+    const q = query(collection(db, 'users', uid.toString(), 'messages'), orderBy('timestamp', 'desc'), limit(30));
     const snap = await getDocs(q);
     return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
   } catch (e) { return []; }
@@ -168,22 +189,11 @@ export const getAppSettings = async (): Promise<AppSettings> => {
   return DEFAULT_SETTINGS;
 };
 
-export const getReferralHistory = async (uid: string): Promise<UserData[]> => {
-  try {
-    const q = query(collection(db, 'users'), where('referred_by', '==', uid.toString()), orderBy('createdAt', 'desc'), limit(20));
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => doc.data() as UserData);
-  } catch (e) {
-    console.error("Referral fetch error:", e);
-    return [];
-  }
-};
-
 export const createWithdrawal = async (request: WithdrawalRequest) => {
   try {
     await addDoc(collection(db, 'withdrawals'), request);
     await updateDoc(doc(db, 'users', request.user_id), { balance: increment(-request.amount) });
-    await addBotMessage(request.user_id, `💸 Withdrawal request for ${request.amount} coins is now pending.`);
+    await addBotMessage(request.user_id, `💸 Withdrawal request submitted: ${request.amount} coins.`);
   } catch (err) { console.error(err); }
 };
 
