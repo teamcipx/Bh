@@ -189,18 +189,25 @@ export const createWithdrawal = async (request: WithdrawalRequest) => {
 
 export const getWithdrawalHistory = async (uid: string): Promise<WithdrawalRequest[]> => {
   try {
-    const q = query(collection(db, 'withdrawals'), where('user_id', '==', uid.toString()), orderBy('timestamp', 'desc'));
+    // Simplified query to avoid index requirements for testing
+    const q = query(collection(db, 'withdrawals'), where('user_id', '==', uid.toString()));
     const snap = await getDocs(q);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithdrawalRequest));
-  } catch (e) { return []; }
+    const results = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithdrawalRequest));
+    // Manual sort to ensure reliability
+    return results.sort((a, b) => b.timestamp - a.timestamp);
+  } catch (e) { 
+    console.error("Error fetching withdrawal history:", e);
+    return []; 
+  }
 };
 
 // Admin Specific
 export const getAllWithdrawals = async (): Promise<WithdrawalRequest[]> => {
   try {
-    const q = query(collection(db, 'withdrawals'), orderBy('timestamp', 'desc'), limit(100));
+    const q = query(collection(db, 'withdrawals'), limit(100));
     const snap = await getDocs(q);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithdrawalRequest));
+    const results = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithdrawalRequest));
+    return results.sort((a, b) => b.timestamp - a.timestamp);
   } catch (e) { return []; }
 };
 

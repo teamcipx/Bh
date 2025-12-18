@@ -39,6 +39,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, refreshUser }) =>
   };
 
   const progress = Math.min(100, (user.balance / settings.min_withdrawal) * 100);
+  const bdtEquivalent = (user.balance / 100).toFixed(2);
 
   return (
     <div className="flex flex-col gap-6 p-4 pb-24 animate-in fade-in duration-700">
@@ -52,7 +53,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, refreshUser }) =>
         <div className="absolute inset-0 bg-gradient-to-t from-blue-900/80 to-transparent flex items-end p-6">
           <div className="text-white">
             <h3 className="font-black text-xl leading-tight">Elite Rewards<br/>Program</h3>
-            <p className="text-xs text-blue-200 mt-1">Watch 50+ ads to unlock VIP status</p>
+            <p className="text-xs text-blue-200 mt-1">1000 Coins = 10 BDT Instant</p>
           </div>
         </div>
       </div>
@@ -66,6 +67,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, refreshUser }) =>
               <h2 className="text-5xl font-black tracking-tighter mt-1">
                 {user.balance.toLocaleString()}
               </h2>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-xl font-black text-white/90">৳ {bdtEquivalent}</span>
+                <span className="text-[8px] font-black uppercase opacity-60 tracking-widest">BDT Value</span>
+              </div>
             </div>
             <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black border border-white/20">
               COINS
@@ -105,7 +110,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, refreshUser }) =>
           <div className="w-8 h-8 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center mb-3">
             <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
           </div>
-          <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Earnings</p>
+          <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Ad Reward</p>
           <p className="text-2xl font-black text-gray-800 dark:text-white mt-1">+{settings.ad_reward}</p>
         </div>
       </div>
@@ -133,7 +138,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, refreshUser }) =>
         </div>
         <div className="overflow-hidden">
           <div className="animate-marquee whitespace-nowrap text-[11px] font-bold text-blue-700 dark:text-blue-400 tracking-tight">
-            {settings.notice} • Withdraw instantly once goal reached! • Invite friends for +10% commission •
+            {settings.notice} • Withdraw instantly once goal reached! • Rate: 1000 Coins = 10 BDT • 
           </div>
         </div>
       </div>

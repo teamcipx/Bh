@@ -20,13 +20,21 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
 
   const fetchHistory = async () => {
     setLoadingHistory(true);
-    const data = await getWithdrawalHistory(user.uid);
-    setHistory(data);
-    setLoadingHistory(false);
+    try {
+      const data = await getWithdrawalHistory(user.uid);
+      setHistory(data);
+    } catch (err) {
+      console.error("Fetch history error:", err);
+    } finally {
+      setLoadingHistory(false);
+    }
   };
 
   useEffect(() => {
     fetchHistory();
+    // Refresh history periodically
+    const interval = setInterval(fetchHistory, 10000);
+    return () => clearInterval(interval);
   }, [user.uid]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,7 +72,7 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
       setAmount('');
       setDetails('');
       refreshUser();
-      fetchHistory(); // Refresh the list
+      fetchHistory(); 
     } catch (err) {
       showAlert("Error submitting request. Try again.");
     } finally {
@@ -89,19 +97,33 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
     });
   };
 
+  // 1000 Coins = 10 BDT logic (100 coins = 1 BDT)
+  const bdtValue = (user.balance / 100).toFixed(2);
+  const requestBdtValue = amount ? (parseInt(amount) / 100).toFixed(2) : "0.00";
+
   return (
     <div className="p-4 pb-24">
-      {/* Balance Card */}
+      {/* Balance Card with BDT conversion */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-[2rem] p-8 text-white mb-6 shadow-xl relative overflow-hidden">
         <div className="relative z-10">
           <h2 className="text-sm font-bold opacity-60 uppercase tracking-widest">Available Balance</h2>
-          <div className="text-4xl font-black mt-2 flex items-center gap-2">
-            {user.balance.toLocaleString()}
-            <span className="text-sm font-black opacity-30 uppercase">Coins</span>
+          <div className="flex items-end gap-3 mt-2">
+            <span className="text-4xl font-black">{user.balance.toLocaleString()}</span>
+            <span className="text-sm font-black opacity-30 uppercase mb-1">Coins</span>
           </div>
-          <p className="mt-6 text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-white/10 rounded-full inline-block border border-white/10 text-yellow-400">
-            Min Goal: {settings.min_withdrawal}
-          </p>
+          <div className="mt-4 flex items-center gap-2">
+            <span className="text-2xl font-black text-green-400">৳ {bdtValue}</span>
+            <span className="text-[10px] font-black opacity-50 uppercase">BDT EQUIVALENT</span>
+          </div>
+          
+          <div className="mt-6 flex flex-wrap gap-2">
+            <p className="text-[9px] font-black uppercase tracking-widest px-3 py-1 bg-white/10 rounded-full border border-white/10 text-yellow-400">
+              Min Goal: {settings.min_withdrawal} Coins
+            </p>
+            <p className="text-[9px] font-black uppercase tracking-widest px-3 py-1 bg-green-500/20 rounded-full border border-green-500/30 text-green-300">
+              Rate: 1000 Coins = 10 BDT
+            </p>
+          </div>
         </div>
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
       </div>
@@ -111,7 +133,7 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
         <h3 className="text-sm font-black uppercase tracking-widest mb-6 text-gray-800 dark:text-white">New Request</h3>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div>
-            <label className="block text-[10px] font-black uppercase text-gray-400 mb-3 tracking-wider">Method</label>
+            <label className="block text-[10px] font-black uppercase text-gray-400 mb-3 tracking-wider">Select Method</label>
             <div className="grid grid-cols-2 gap-2">
               {['bkash', 'binance', 'nagad', 'usdt'].map((m) => (
                 <button
@@ -131,24 +153,30 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
           </div>
 
           <div>
-            <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 tracking-wider">Amount</label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder={`Min ${settings.min_withdrawal}`}
-              className="w-full bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 text-lg font-black"
-              required
-            />
+            <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 tracking-wider">Amount (Coins)</label>
+            <div className="relative">
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder={`Min ${settings.min_withdrawal}`}
+                className="w-full bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 text-lg font-black pr-24"
+                required
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-right">
+                <p className="text-[10px] font-black text-green-500">৳ {requestBdtValue}</p>
+                <p className="text-[8px] font-bold text-gray-400 uppercase">BDT</p>
+              </div>
+            </div>
           </div>
 
           <div>
-            <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 tracking-wider">Payment Details</label>
+            <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 tracking-wider">Receiver Number / Wallet</label>
             <input
               type="text"
               value={details}
               onChange={(e) => setDetails(e.target.value)}
-              placeholder="Number / Wallet Address"
+              placeholder="e.g. 017XXXXXXXX"
               className="w-full bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 text-sm font-bold"
               required
             />
@@ -168,7 +196,7 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
             ) : (
               <>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                Send Request
+                Withdraw Now
               </>
             )}
           </button>
@@ -183,14 +211,14 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
             onClick={fetchHistory}
             className="text-blue-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 active:opacity-50"
           >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className={`w-3 h-3 ${loadingHistory ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Sync
+            Refresh
           </button>
         </div>
 
-        {loadingHistory ? (
+        {loadingHistory && history.length === 0 ? (
           <div className="flex justify-center py-10">
             <div className="w-8 h-8 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin"></div>
           </div>
@@ -199,14 +227,14 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
             <svg className="w-12 h-12 mx-auto text-gray-200 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
             </svg>
-            <p className="text-gray-300 font-black uppercase text-[10px] tracking-widest">No history yet</p>
+            <p className="text-gray-300 font-black uppercase text-[10px] tracking-widest">No withdrawal history</p>
           </div>
         ) : (
           <div className="space-y-3">
             {history.map((req) => (
               <div 
                 key={req.id} 
-                className="bg-white dark:bg-gray-900 p-5 rounded-[1.5rem] border border-gray-100 dark:border-gray-800 flex items-center justify-between shadow-sm"
+                className="bg-white dark:bg-gray-900 p-5 rounded-[1.5rem] border border-gray-100 dark:border-gray-800 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-black/20 flex items-center justify-center text-blue-600 border border-gray-100 dark:border-gray-800 shadow-inner">
