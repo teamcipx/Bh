@@ -1,4 +1,3 @@
-
 declare global {
   interface Window {
     Telegram: any;
@@ -21,12 +20,21 @@ export const getStartParam = (): string | null => {
 };
 
 export const hapticFeedback = () => {
-  tg?.HapticFeedback?.impactOccurred('medium');
+  try {
+    tg?.HapticFeedback?.impactOccurred('medium');
+  } catch (e) {
+    console.warn("Haptic feedback not supported");
+  }
 };
 
 export const shareApp = (userId: string) => {
   const link = `https://t.me/AdearnX_bot/app?startapp=${userId}`;
-  tg?.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent("Join this amazing app and earn coins!")}`);
+  const text = "Join this amazing app and earn coins!";
+  try {
+    tg?.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
+  } catch (e) {
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`, '_blank');
+  }
 };
 
 export const closeApp = () => {
@@ -34,5 +42,13 @@ export const closeApp = () => {
 };
 
 export const showAlert = (message: string) => {
-  tg?.showAlert(message);
+  try {
+    if (tg?.showAlert) {
+      tg.showAlert(message);
+    } else {
+      alert(message);
+    }
+  } catch (e) {
+    alert(message);
+  }
 };
