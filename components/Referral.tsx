@@ -66,6 +66,32 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
 
   return (
     <div className="p-4 flex flex-col gap-6 pb-24 animate-in slide-in-from-right duration-500">
+      {/* Referral Guide Section */}
+      <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+        <h3 className="text-sm font-black uppercase tracking-widest text-blue-600 mb-5 flex items-center gap-2">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          How it Works
+        </h3>
+        <div className="space-y-5">
+          {[
+            { step: "1", title: "Share UID", desc: "Invite friends by sharing your unique Invitation UID." },
+            { step: "2", title: "Friend Redeems", desc: "Your friend enters your UID in the 'Redeem' section below." },
+            { step: "3", title: "Instant 500", desc: "Both you and your friend receive +500 coins immediately!" },
+            { step: "4", title: "10% Commission", desc: "Earn 10% bonus from every ad your friend watches, forever." }
+          ].map((item, idx) => (
+            <div key={idx} className="flex gap-4 items-start">
+              <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">
+                {item.step}
+              </div>
+              <div>
+                <h4 className="text-[12px] font-black text-gray-800 dark:text-gray-100">{item.title}</h4>
+                <p className="text-[10px] text-gray-400 font-bold leading-relaxed">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Code Card */}
       <div className="bg-gradient-to-br from-indigo-700 via-blue-600 to-indigo-500 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group">
         <div className="relative z-10 text-center">
