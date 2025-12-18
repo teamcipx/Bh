@@ -25,7 +25,7 @@ const Referral: React.FC<ReferralProps> = ({ user }) => {
           </svg>
         </div>
         <h1 className="text-2xl font-bold">Refer & Earn</h1>
-        <p className="text-gray-500 mt-2">Invite your friends and get 500 coins instantly when they join!</p>
+        <p className="text-gray-500 mt-2">Earn recurring rewards from your network!</p>
       </div>
 
       <div className="bg-[var(--tg-secondary-bg)] p-6 rounded-2xl border border-gray-200 dark:border-gray-800">
@@ -61,19 +61,28 @@ const Referral: React.FC<ReferralProps> = ({ user }) => {
       </div>
 
       <div className="mt-4">
-        <h3 className="font-bold mb-3">How it works?</h3>
-        <ul className="space-y-3">
+        <h3 className="font-bold mb-3 text-blue-600">The Ultimate Referral Program</h3>
+        <ul className="space-y-4">
           <li className="flex gap-3 text-sm">
             <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0 font-bold">1</span>
-            <p>Send your referral link to friends or share it in groups.</p>
+            <div>
+              <p className="font-bold">Instant Reward</p>
+              <p className="text-gray-500">Get 500 coins instantly when a friend joins via your link.</p>
+            </div>
           </li>
           <li className="flex gap-3 text-sm">
-            <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0 font-bold">2</span>
-            <p>Wait for them to join the app using your unique link.</p>
+            <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 font-bold">2</span>
+            <div>
+              <p className="font-bold">Lifetime 10% Commission</p>
+              <p className="text-gray-500">Earn 10% of every coin your referrals earn by watching ads, forever!</p>
+            </div>
           </li>
           <li className="flex gap-3 text-sm">
-            <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0 font-bold">3</span>
-            <p>Instantly receive 500 bonus coins added to your balance!</p>
+            <span className="w-6 h-6 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 font-bold">3</span>
+            <div>
+              <p className="font-bold">Unlimited Depth</p>
+              <p className="text-gray-500">The more friends you invite, the more your passive income grows.</p>
+            </div>
           </li>
         </ul>
       </div>

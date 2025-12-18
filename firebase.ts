@@ -8,7 +8,11 @@ import {
   updateDoc, 
   collection, 
   addDoc, 
-  increment 
+  increment,
+  query,
+  where,
+  orderBy,
+  getDocs
 } from 'firebase/firestore';
 import { UserData, AppSettings, WithdrawalRequest } from './types';
 
@@ -70,12 +74,12 @@ export const registerUser = async (uid: string, referralCode: string | null, det
 
     await setDoc(doc(db, 'users', uid), newUser);
 
-    if (referralCode) {
+    if (referralCode && referralCode !== uid) {
       const referrerRef = doc(db, 'users', referralCode);
       const referrerSnap = await getDoc(referrerRef);
       if (referrerSnap.exists()) {
         await updateDoc(referrerRef, {
-          balance: increment(500)
+          balance: increment(500) // Initial signup bonus for referrer
         });
       }
     }
@@ -95,12 +99,23 @@ export const registerUser = async (uid: string, referralCode: string | null, det
   }
 };
 
-export const updateAdWatch = async (uid: string, reward: number) => {
+export const updateAdWatch = async (uid: string, reward: number, referredBy: string | null) => {
   const userRef = doc(db, 'users', uid);
   await updateDoc(userRef, {
     balance: increment(reward),
     total_watched: increment(1)
   });
+
+  // Improved Referral Commission: 10% of user's ad earning goes to referrer
+  if (referredBy) {
+    const referrerRef = doc(db, 'users', referredBy);
+    const commission = Math.floor(reward * 0.1);
+    if (commission > 0) {
+      await updateDoc(referrerRef, {
+        balance: increment(commission)
+      });
+    }
+  }
 };
 
 export const getAppSettings = async (): Promise<AppSettings> => {
@@ -128,4 +143,19 @@ export const createWithdrawal = async (request: WithdrawalRequest) => {
   await updateDoc(userRef, {
     balance: increment(-request.amount)
   });
+};
+
+export const getWithdrawalHistory = async (uid: string): Promise<WithdrawalRequest[]> => {
+  try {
+    const q = query(
+      collection(db, 'withdrawals'),
+      where('user_id', '==', uid),
+      orderBy('timestamp', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithdrawalRequest));
+  } catch (error) {
+    console.error("Error fetching withdrawal history:", error);
+    return [];
+  }
 };

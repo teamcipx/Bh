@@ -1,8 +1,13 @@
 
 import React from 'react';
 import { UserData, AppSettings } from '../types';
-import { updateAdWatch, getUserData } from '../firebase';
+import { updateAdWatch } from '../firebase';
 import { hapticFeedback, showAlert } from '../telegram';
+
+// Declare global ad function from SDK
+declare global {
+  function show_10342982(): Promise<void>;
+}
 
 interface DashboardProps {
   user: UserData;
@@ -14,24 +19,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, refreshUser }) =>
   const [isWatching, setIsWatching] = React.useState(false);
 
   const handleWatchAd = async () => {
+    if (typeof show_10342982 !== 'function') {
+      showAlert("Ad service is currently unavailable. Please try again later.");
+      return;
+    }
+
     hapticFeedback();
     setIsWatching(true);
     
-    // Simulate Ad playback
-    showAlert("Loading video ad...");
-    
-    setTimeout(async () => {
-      try {
-        await updateAdWatch(user.uid, settings.ad_reward);
-        showAlert(`Reward Claimed! You earned ${settings.ad_reward} coins.`);
-        refreshUser();
-      } catch (err) {
-        console.error(err);
-        showAlert("Failed to update balance.");
-      } finally {
-        setIsWatching(false);
-      }
-    }, 3000); // 3-second simulation
+    try {
+      // Execute the real rewarded ad function
+      await show_10342982();
+      
+      // If the promise resolves, the user has seen the ad
+      await updateAdWatch(user.uid, settings.ad_reward, user.referred_by);
+      showAlert(`Reward Claimed! You earned ${settings.ad_reward} coins.`);
+      refreshUser();
+    } catch (err) {
+      console.error("Ad playback error or cancellation:", err);
+      // If the SDK throws on close without completion, handle it here
+      // Some SDKs might just resolve anyway, check your SDK documentation
+    } finally {
+      setIsWatching(false);
+    }
   };
 
   return (
