@@ -10,6 +10,13 @@ export interface UserData {
   createdAt: number;
 }
 
+export interface Message {
+  id?: string;
+  text: string;
+  timestamp: number;
+  type: 'system' | 'bot';
+}
+
 export interface WithdrawalRequest {
   id?: string;
   user_id: string;
@@ -28,4 +35,4 @@ export interface AppSettings {
   min_withdrawal: number;
 }
 
-export type Tab = 'home' | 'referral' | 'withdraw' | 'profile';
+export type Tab = 'home' | 'chat' | 'referral' | 'withdraw' | 'profile';

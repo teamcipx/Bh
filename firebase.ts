@@ -12,11 +12,11 @@ import {
   query,
   where,
   orderBy,
-  getDocs
+  getDocs,
+  limit
 } from 'firebase/firestore';
-import { UserData, AppSettings, WithdrawalRequest } from './types';
+import { UserData, AppSettings, WithdrawalRequest, Message } from './types';
 
-// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyCJAd3sdsoFKUcza2z-9VYlfIkm1BL4kd4",
   authDomain: "ttggg-9f560.firebaseapp.com",
@@ -27,10 +27,6 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-
-/**
- * Using long-polling to ensure connectivity in restricted environments like Telegram's proxy.
- */
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 });
@@ -43,17 +39,26 @@ const DEFAULT_SETTINGS: AppSettings = {
   min_withdrawal: 5000
 };
 
+const WELCOME_BONUS = 1000;
+const REFERRAL_BONUS = 500;
+
 export const getUserData = async (uid: string): Promise<UserData | null> => {
   try {
     const userRef = doc(db, 'users', uid);
     const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-      return userSnap.data() as UserData;
-    }
-  } catch (error) {
-    console.warn("Firestore getUserData error (likely offline):", error);
-  }
+    if (userSnap.exists()) return userSnap.data() as UserData;
+  } catch (error) { console.error(error); }
   return null;
+};
+
+export const addBotMessage = async (uid: string, text: string) => {
+  try {
+    await addDoc(collection(db, 'users', uid, 'messages'), {
+      text,
+      timestamp: Date.now(),
+      type: 'bot'
+    });
+  } catch (e) { console.error(e); }
 };
 
 export const registerUser = async (uid: string, referralCode: string | null, details: Partial<UserData>): Promise<UserData> => {
@@ -61,21 +66,18 @@ export const registerUser = async (uid: string, referralCode: string | null, det
     const existing = await getUserData(uid);
     if (existing) return existing;
 
-    let initialBalance = 0;
-    let validReferrer = false;
+    let balance = WELCOME_BONUS;
+    let referred_by = null;
 
-    // Dual Bonus Logic: Both get rewarded
     if (referralCode && referralCode !== uid) {
       const referrerRef = doc(db, 'users', referralCode);
       const referrerSnap = await getDoc(referrerRef);
       if (referrerSnap.exists()) {
-        validReferrer = true;
-        initialBalance = 250; // New user gets 250 coins
+        balance += REFERRAL_BONUS;
+        referred_by = referralCode;
         
-        // Referrer gets 500 coins bonus
-        await updateDoc(referrerRef, {
-          balance: increment(500)
-        });
+        await updateDoc(referrerRef, { balance: increment(REFERRAL_BONUS) });
+        await addBotMessage(referralCode, "🎉 Someone joined using your link! You earned 500 coins.");
       }
     }
 
@@ -84,89 +86,62 @@ export const registerUser = async (uid: string, referralCode: string | null, det
       firstName: details.firstName || '',
       lastName: details.lastName || '',
       username: details.username || '',
-      balance: initialBalance,
+      balance,
       total_watched: 0,
-      referred_by: validReferrer ? referralCode : null,
+      referred_by,
       createdAt: Date.now(),
     };
 
     await setDoc(doc(db, 'users', uid), newUser);
+    await addBotMessage(uid, `👋 Welcome to CoinEarn! You've received ${balance} coins as a starting bonus! 💰`);
+    
     return newUser;
   } catch (error: any) {
-    console.error("Firestore registerUser error:", error);
-    return {
-      uid,
-      firstName: details.firstName || 'Guest',
-      lastName: details.lastName || '',
-      username: details.username || 'guest',
-      balance: 0,
-      total_watched: 0,
-      referred_by: null,
-      createdAt: Date.now(),
-    };
+    console.error(error);
+    return { uid, balance: 0, total_watched: 0, referred_by: null, createdAt: Date.now() };
   }
 };
 
 export const updateAdWatch = async (uid: string, reward: number, referredBy: string | null) => {
-  try {
-    const userRef = doc(db, 'users', uid);
-    await updateDoc(userRef, {
-      balance: increment(reward),
-      total_watched: increment(1)
-    });
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, {
+    balance: increment(reward),
+    total_watched: increment(1)
+  });
+  await addBotMessage(uid, `📺 Ad watched successfully! +${reward} coins added to your balance.`);
 
-    if (referredBy) {
-      const referrerRef = doc(db, 'users', referredBy);
-      const commission = Math.floor(reward * 0.1); // 10% lifetime commission
-      if (commission > 0) {
-        await updateDoc(referrerRef, {
-          balance: increment(commission)
-        });
-      }
+  if (referredBy) {
+    const commission = Math.floor(reward * 0.1);
+    if (commission > 0) {
+      await updateDoc(doc(db, 'users', referredBy), { balance: increment(commission) });
     }
-  } catch (err) {
-    console.error("Failed to update ad watch:", err);
   }
+};
+
+export const getMessages = async (uid: string): Promise<Message[]> => {
+  try {
+    const q = query(collection(db, 'users', uid, 'messages'), orderBy('timestamp', 'desc'), limit(50));
+    const snap = await getDocs(q);
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+  } catch (e) { return []; }
 };
 
 export const getAppSettings = async (): Promise<AppSettings> => {
   try {
-    const settingsRef = doc(db, 'settings', 'config');
-    const settingsSnap = await getDoc(settingsRef);
-    if (settingsSnap.exists()) {
-      return settingsSnap.data() as AppSettings;
-    }
-  } catch (error) {
-    console.warn("Firestore getAppSettings error (using defaults):", error);
-  }
+    const snap = await getDoc(doc(db, 'settings', 'config'));
+    if (snap.exists()) return snap.data() as AppSettings;
+  } catch (error) {}
   return DEFAULT_SETTINGS;
 };
 
 export const createWithdrawal = async (request: WithdrawalRequest) => {
-  const userRef = doc(db, 'users', request.user_id);
-  const userSnap = await getDoc(userRef);
-  if (!userSnap.exists()) return;
-
-  const userData = userSnap.data() as UserData;
-  if (userData.balance < request.amount) throw new Error("Insufficient balance");
-
   await addDoc(collection(db, 'withdrawals'), request);
-  await updateDoc(userRef, {
-    balance: increment(-request.amount)
-  });
+  await updateDoc(doc(db, 'users', request.user_id), { balance: increment(-request.amount) });
+  await addBotMessage(request.user_id, `💸 Withdrawal request for ${request.amount} coins submitted. Please wait for processing.`);
 };
 
 export const getWithdrawalHistory = async (uid: string): Promise<WithdrawalRequest[]> => {
-  try {
-    const q = query(
-      collection(db, 'withdrawals'),
-      where('user_id', '==', uid),
-      orderBy('timestamp', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithdrawalRequest));
-  } catch (error) {
-    console.error("Error fetching withdrawal history:", error);
-    return [];
-  }
+  const q = query(collection(db, 'withdrawals'), where('user_id', '==', uid), orderBy('timestamp', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithdrawalRequest));
 };
