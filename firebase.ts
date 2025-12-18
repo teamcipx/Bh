@@ -136,8 +136,6 @@ export const submitReferralCode = async (uid: string, code: string): Promise<{su
 
 export const getReferralHistory = async (uid: string): Promise<UserData[]> => {
   try {
-    // Note: This requires a composite index in Firestore (referred_by ASC, createdAt DESC)
-    // If the index isn't ready, it will fallback to a simpler query.
     const q = query(
       collection(db, 'users'), 
       where('referred_by', '==', uid.toString()), 
@@ -147,7 +145,6 @@ export const getReferralHistory = async (uid: string): Promise<UserData[]> => {
     const snap = await getDocs(q);
     return snap.docs.map(doc => doc.data() as UserData);
   } catch (e) {
-    console.warn("Falling back to simple referral query...", e);
     const qSimple = query(collection(db, 'users'), where('referred_by', '==', uid.toString()));
     const snap = await getDocs(qSimple);
     return snap.docs.map(doc => doc.data() as UserData);
@@ -187,6 +184,15 @@ export const getAppSettings = async (): Promise<AppSettings> => {
     if (snap.exists()) return snap.data() as AppSettings;
   } catch (error) {}
   return DEFAULT_SETTINGS;
+};
+
+export const updateAppSettings = async (newSettings: Partial<AppSettings>) => {
+  try {
+    await setDoc(doc(db, 'settings', 'config'), newSettings, { merge: true });
+  } catch (e) {
+    console.error("Update settings error:", e);
+    throw e;
+  }
 };
 
 export const createWithdrawal = async (request: WithdrawalRequest) => {

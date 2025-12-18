@@ -36,4 +36,4 @@ export interface AppSettings {
   min_withdrawal: number;
 }
 
-export type Tab = 'home' | 'chat' | 'referral' | 'withdraw' | 'profile';
+export type Tab = 'home' | 'chat' | 'referral' | 'withdraw' | 'profile' | 'admin';
