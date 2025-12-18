@@ -39,7 +39,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   min_withdrawal: 5000
 };
 
-const WELCOME_BONUS = 1000;
+const WELCOME_BONUS_BASE = 1000;
 const REFERRAL_BONUS = 500;
 
 export const getUserData = async (uid: string): Promise<UserData | null> => {
@@ -47,7 +47,7 @@ export const getUserData = async (uid: string): Promise<UserData | null> => {
     const userRef = doc(db, 'users', uid);
     const userSnap = await getDoc(userRef);
     if (userSnap.exists()) return userSnap.data() as UserData;
-  } catch (error) { console.error(error); }
+  } catch (error) { console.error("Error fetching user:", error); }
   return null;
 };
 
@@ -58,7 +58,7 @@ export const addBotMessage = async (uid: string, text: string) => {
       timestamp: Date.now(),
       type: 'bot'
     });
-  } catch (e) { console.error(e); }
+  } catch (e) { console.error("Error adding message:", e); }
 };
 
 export const registerUser = async (uid: string, referralCode: string | null, details: Partial<UserData>): Promise<UserData> => {
@@ -66,18 +66,18 @@ export const registerUser = async (uid: string, referralCode: string | null, det
     const existing = await getUserData(uid);
     if (existing) return existing;
 
-    let balance = WELCOME_BONUS;
+    let balance = WELCOME_BONUS_BASE;
     let referred_by = null;
 
     if (referralCode && referralCode !== uid) {
       const referrerRef = doc(db, 'users', referralCode);
       const referrerSnap = await getDoc(referrerRef);
       if (referrerSnap.exists()) {
-        balance += REFERRAL_BONUS;
+        balance += REFERRAL_BONUS; // Referred user gets extra 500
         referred_by = referralCode;
         
         await updateDoc(referrerRef, { balance: increment(REFERRAL_BONUS) });
-        await addBotMessage(referralCode, "🎉 Someone joined using your link! You earned 500 coins.");
+        await addBotMessage(referralCode, "🎉 New Referral! Someone joined using your link. You earned 500 coins.");
       }
     }
 
@@ -93,29 +93,31 @@ export const registerUser = async (uid: string, referralCode: string | null, det
     };
 
     await setDoc(doc(db, 'users', uid), newUser);
-    await addBotMessage(uid, `👋 Welcome to CoinEarn! You've received ${balance} coins as a starting bonus! 💰`);
+    await addBotMessage(uid, `👋 Welcome to CoinEarn! You received ${balance} coins as a welcome bonus! 💰`);
     
     return newUser;
   } catch (error: any) {
-    console.error(error);
+    console.error("Registration error:", error);
     return { uid, balance: 0, total_watched: 0, referred_by: null, createdAt: Date.now() };
   }
 };
 
 export const updateAdWatch = async (uid: string, reward: number, referredBy: string | null) => {
-  const userRef = doc(db, 'users', uid);
-  await updateDoc(userRef, {
-    balance: increment(reward),
-    total_watched: increment(1)
-  });
-  await addBotMessage(uid, `📺 Ad watched successfully! +${reward} coins added to your balance.`);
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      balance: increment(reward),
+      total_watched: increment(1)
+    });
+    await addBotMessage(uid, `📺 Ad watched! +${reward} coins added to your wallet.`);
 
-  if (referredBy) {
-    const commission = Math.floor(reward * 0.1);
-    if (commission > 0) {
-      await updateDoc(doc(db, 'users', referredBy), { balance: increment(commission) });
+    if (referredBy) {
+      const commission = Math.floor(reward * 0.1);
+      if (commission > 0) {
+        await updateDoc(doc(db, 'users', referredBy), { balance: increment(commission) });
+      }
     }
-  }
+  } catch (err) { console.error("Ad update error:", err); }
 };
 
 export const getMessages = async (uid: string): Promise<Message[]> => {
@@ -135,13 +137,17 @@ export const getAppSettings = async (): Promise<AppSettings> => {
 };
 
 export const createWithdrawal = async (request: WithdrawalRequest) => {
-  await addDoc(collection(db, 'withdrawals'), request);
-  await updateDoc(doc(db, 'users', request.user_id), { balance: increment(-request.amount) });
-  await addBotMessage(request.user_id, `💸 Withdrawal request for ${request.amount} coins submitted. Please wait for processing.`);
+  try {
+    await addDoc(collection(db, 'withdrawals'), request);
+    await updateDoc(doc(db, 'users', request.user_id), { balance: increment(-request.amount) });
+    await addBotMessage(request.user_id, `💸 Withdrawal of ${request.amount} coins is pending review.`);
+  } catch (err) { console.error(err); }
 };
 
 export const getWithdrawalHistory = async (uid: string): Promise<WithdrawalRequest[]> => {
-  const q = query(collection(db, 'withdrawals'), where('user_id', '==', uid), orderBy('timestamp', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithdrawalRequest));
+  try {
+    const q = query(collection(db, 'withdrawals'), where('user_id', '==', uid), orderBy('timestamp', 'desc'));
+    const snap = await getDocs(q);
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithdrawalRequest));
+  } catch (e) { return []; }
 };

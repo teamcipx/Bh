@@ -21,9 +21,9 @@ const Referral: React.FC<ReferralProps> = ({ user }) => {
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
         <div className="relative z-10">
-          <h1 className="text-3xl font-black leading-tight">Give 250,<br/>Get 500!</h1>
+          <h1 className="text-3xl font-black leading-tight">Give 500,<br/>Get 500!</h1>
           <p className="mt-2 text-blue-100 font-medium max-w-[200px]">
-            Friends get 250 coins, you get 500 coins + 10% commission.
+            Friends get +500 coins bonus, you get 500 coins + 10% commission.
           </p>
         </div>
         <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
@@ -77,7 +77,7 @@ const Referral: React.FC<ReferralProps> = ({ user }) => {
           </div>
           <div>
             <h4 className="font-bold text-sm">Send your link</h4>
-            <p className="text-xs text-gray-500 mt-1">Share your unique referral link with your friends on Telegram or social media.</p>
+            <p className="text-xs text-gray-500 mt-1">Share your unique link with friends who haven't joined CoinEarn yet.</p>
           </div>
         </div>
 
@@ -86,8 +86,8 @@ const Referral: React.FC<ReferralProps> = ({ user }) => {
             <span className="font-black text-green-600">2</span>
           </div>
           <div>
-            <h4 className="font-bold text-sm">Dual Bonus Claimed</h4>
-            <p className="text-xs text-gray-500 mt-1">Your friend gets <span className="text-green-600 font-bold">250 coins</span> instantly, and you get <span className="text-green-600 font-bold">500 coins</span>.</p>
+            <h4 className="font-bold text-sm">Instant Referral Reward</h4>
+            <p className="text-xs text-gray-500 mt-1">They get <span className="text-green-600 font-bold">1500 coins</span> (1000 Welcome + 500 Ref), you get <span className="text-green-600 font-bold">500 coins</span>.</p>
           </div>
         </div>
 
@@ -96,8 +96,8 @@ const Referral: React.FC<ReferralProps> = ({ user }) => {
             <span className="font-black text-purple-600">3</span>
           </div>
           <div>
-            <h4 className="font-bold text-sm">Passive Earnings</h4>
-            <p className="text-xs text-gray-500 mt-1">Receive <span className="text-purple-600 font-bold">10% commission</span> every time your referrals watch an ad.</p>
+            <h4 className="font-bold text-sm">Lifetime Commission</h4>
+            <p className="text-xs text-gray-500 mt-1">Earn <span className="text-purple-600 font-bold">10% commission</span> on every single ad they watch, forever.</p>
           </div>
         </div>
       </div>
