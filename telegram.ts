@@ -1,3 +1,4 @@
+
 declare global {
   interface Window {
     Telegram: any;
@@ -15,10 +16,6 @@ export const getTelegramUser = () => {
   };
 };
 
-export const getStartParam = (): string | null => {
-  return tg?.initDataUnsafe?.start_param || null;
-};
-
 export const hapticFeedback = () => {
   try {
     tg?.HapticFeedback?.impactOccurred('medium');
@@ -28,8 +25,8 @@ export const hapticFeedback = () => {
 };
 
 export const shareApp = (userId: string) => {
-  const link = `https://t.me/AdearnX_bot/app?startapp=${userId}`;
-  const text = "Join this amazing app and earn coins!";
+  const link = `https://t.me/AdearnX_bot/app`;
+  const text = `Join CoinEarn and start earning daily coins! 💸\n\nUse my Referral Code to get +500 coins instantly: ${userId}`;
   try {
     tg?.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
   } catch (e) {

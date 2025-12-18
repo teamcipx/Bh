@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { UserData, AppSettings, Tab } from './types';
 import { registerUser, getUserData, getAppSettings } from './firebase';
-import { getTelegramUser, getStartParam, tg, hapticFeedback } from './telegram';
+import { getTelegramUser, tg, hapticFeedback } from './telegram';
 import Dashboard from './components/Dashboard';
 import Referral from './components/Referral';
 import Withdrawal from './components/Withdrawal';
@@ -14,20 +14,16 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const initApp = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
       
       const tgUser = getTelegramUser();
-      const referralCode = getStartParam();
-      
       const config = await getAppSettings();
       setSettings(config);
 
-      const registered = await registerUser(tgUser.id.toString(), referralCode, {
+      const registered = await registerUser(tgUser.id.toString(), {
         firstName: tgUser.first_name,
         lastName: tgUser.last_name,
         username: tgUser.username,
@@ -39,7 +35,6 @@ const App: React.FC = () => {
       tg?.ready();
     } catch (err: any) {
       console.error("Initialization error:", err);
-      setError(err.message || "Connection issue. Retrying...");
     } finally {
       setLoading(false);
     }
@@ -64,7 +59,7 @@ const App: React.FC = () => {
       <div className="flex flex-col items-center justify-center h-screen bg-[var(--tg-bg)] text-[var(--tg-text)] p-8 text-center">
         <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
         <h1 className="text-xl font-bold tracking-tighter text-blue-600">CoinEarn</h1>
-        <p className="text-gray-500 mt-2 font-medium">Securing Connection...</p>
+        <p className="text-gray-500 mt-2 font-medium">Authenticating Secure Session...</p>
       </div>
     );
   }
@@ -74,7 +69,7 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'home': return <Dashboard user={user} settings={settings} refreshUser={refreshUser} />;
       case 'chat': return <Chat user={user} />;
-      case 'referral': return <Referral user={user} />;
+      case 'referral': return <Referral user={user} refreshUser={refreshUser} />;
       case 'withdraw': return <Withdrawal user={user} settings={settings} refreshUser={refreshUser} />;
       case 'profile': return <Profile user={user} />;
       default: return <Dashboard user={user} settings={settings} refreshUser={refreshUser} />;

@@ -7,6 +7,7 @@ export interface UserData {
   balance: number;
   total_watched: number;
   referred_by: string | null;
+  hasSubmittedCode?: boolean;
   createdAt: number;
 }
 

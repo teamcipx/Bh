@@ -32,7 +32,7 @@ export const db = initializeFirestore(app, {
 });
 
 const DEFAULT_SETTINGS: AppSettings = {
-  notice: "🚀 Welcome to the new CoinEarn! Watch, Invite & Earn daily.",
+  notice: "🚀 Welcome to CoinEarn! Watch, Invite & Earn daily.",
   banner_url: "https://images.unsplash.com/photo-1611974717424-35843a84fd20?auto=format&fit=crop&w=800&q=80",
   banner_link: "https://t.me/AdearnX_bot",
   ad_reward: 100,
@@ -61,49 +61,75 @@ export const addBotMessage = async (uid: string, text: string) => {
   } catch (e) { console.error("Error adding message:", e); }
 };
 
-export const registerUser = async (uid: string, referralCode: string | null, details: Partial<UserData>): Promise<UserData> => {
+export const registerUser = async (uid: string, details: Partial<UserData>): Promise<UserData> => {
   const userId = uid.toString();
   try {
     const existing = await getUserData(userId);
     if (existing) return existing;
-
-    let balance = WELCOME_BONUS_BASE;
-    let referred_by = null;
-
-    if (referralCode && referralCode.trim() !== "" && referralCode.toString() !== userId) {
-      const referrerId = referralCode.toString();
-      const referrerRef = doc(db, 'users', referrerId);
-      const referrerSnap = await getDoc(referrerRef);
-      
-      if (referrerSnap.exists()) {
-        referred_by = referrerId;
-        balance += REFERRAL_BONUS;
-        await updateDoc(referrerRef, { balance: increment(REFERRAL_BONUS) });
-        await addBotMessage(referrerId, `💎 New Team Member! A friend joined using your link. +500 Coins added to your balance.`);
-      }
-    }
 
     const newUser: UserData = {
       uid: userId,
       firstName: details.firstName || 'User',
       lastName: details.lastName || '',
       username: details.username || 'user',
-      balance,
+      balance: WELCOME_BONUS_BASE,
       total_watched: 0,
-      referred_by,
+      referred_by: null,
+      hasSubmittedCode: false,
       createdAt: Date.now(),
     };
 
     await setDoc(doc(db, 'users', userId), newUser);
     
-    // Pro Welcome Sequence
-    await addBotMessage(userId, `🚀 Welcome to the Family, ${details.firstName}!`);
-    await addBotMessage(userId, `💰 You've received a ${balance} coin starter bonus. Start watching ads to reach your first withdrawal!`);
+    // AUTOMATED WELCOME SEQUENCE
+    const name = details.firstName || 'User';
+    await addBotMessage(userId, `🎉 Welcome to CoinEarn, ${name}!`);
+    await addBotMessage(userId, `💰 We've started you off with ${WELCOME_BONUS_BASE} coins as a welcome gift.`);
+    await addBotMessage(userId, `🚀 Quick Start Guide:\n1. Watch Ads in the Home tab to earn ${DEFAULT_SETTINGS.ad_reward} coins each.\n2. Go to the Invite tab to redeem a friend's referral code for +500 coins instantly!\n3. Reach ${DEFAULT_SETTINGS.min_withdrawal} coins to request your first payment.`);
+    await addBotMessage(userId, `🤝 If you have any questions, our support team is always here to help. Happy earning!`);
     
     return newUser;
   } catch (error: any) {
     console.error("Registration error:", error);
     return { uid: userId, balance: 0, total_watched: 0, referred_by: null, createdAt: Date.now() };
+  }
+};
+
+export const submitReferralCode = async (uid: string, code: string): Promise<{success: boolean, message: string}> => {
+  try {
+    const userId = uid.toString();
+    const referrerId = code.trim();
+    
+    if (referrerId === userId) return { success: false, message: "You cannot use your own code." };
+    
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) return { success: false, message: "User not found." };
+    
+    const userData = userSnap.data() as UserData;
+    if (userData.referred_by || userData.hasSubmittedCode) {
+      return { success: false, message: "Referral code already applied." };
+    }
+
+    const referrerRef = doc(db, 'users', referrerId);
+    const referrerSnap = await getDoc(referrerRef);
+    if (!referrerSnap.exists()) return { success: false, message: "Invalid Referral Code. Check with your friend." };
+
+    // Bonus for Referrer
+    await updateDoc(referrerRef, { balance: increment(REFERRAL_BONUS) });
+    await addBotMessage(referrerId, `💎 Referral Bonus: Someone used your code! +${REFERRAL_BONUS} Coins added.`);
+
+    // Bonus for New User
+    await updateDoc(userRef, { 
+      balance: increment(REFERRAL_BONUS),
+      referred_by: referrerId,
+      hasSubmittedCode: true
+    });
+    await addBotMessage(userId, `✅ Code Success: +${REFERRAL_BONUS} coins received for joining the team!`);
+
+    return { success: true, message: "Referral code applied successfully!" };
+  } catch (e) {
+    return { success: false, message: "Submission failed. Please try again." };
   }
 };
 
@@ -115,7 +141,7 @@ export const updateAdWatch = async (uid: string, reward: number, referredBy: str
       total_watched: increment(1)
     });
     
-    await addBotMessage(uid, `✅ Reward: +${reward} coins. Great job!`);
+    await addBotMessage(uid, `✅ Ad Reward: +${reward} coins.`);
 
     if (referredBy) {
       const commission = Math.floor(reward * 0.1);
@@ -157,7 +183,7 @@ export const createWithdrawal = async (request: WithdrawalRequest) => {
   try {
     await addDoc(collection(db, 'withdrawals'), request);
     await updateDoc(doc(db, 'users', request.user_id), { balance: increment(-request.amount) });
-    await addBotMessage(request.user_id, `💸 Withdrawal Request Received: ${request.amount} coins is being processed.`);
+    await addBotMessage(request.user_id, `💸 Withdrawal request for ${request.amount} coins is now pending.`);
   } catch (err) { console.error(err); }
 };
 
