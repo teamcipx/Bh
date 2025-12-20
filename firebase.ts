@@ -32,7 +32,7 @@ export const db = initializeFirestore(app, {
 });
 
 const DEFAULT_SETTINGS: AppSettings = {
-  notice: "🚀 Welcome to CoinEarn! Watch, Invite & Earn daily.",
+  notice: "🚀 কয়েনআর্নে আপনাকে স্বাগতম! বিজ্ঞাপন দেখুন আর বন্ধুদের ইনভাইট করে প্রতিদিন ইনকাম করুন।",
   banner_url: "https://images.unsplash.com/photo-1611974717424-35843a84fd20?auto=format&fit=crop&w=800&q=80",
   banner_link: "https://t.me/AdearnX_bot",
   ad_reward: 100,
@@ -53,11 +53,12 @@ export const getUserData = async (uid: string): Promise<UserData | null> => {
     if (userSnap.exists()) {
       const data = userSnap.data() as UserData;
       
-      // FIX: Handle users registered before the referralCode update
-      if (!data.referralCode || data.referralCount === undefined) {
+      // FIX: Handle legacy users
+      if (!data.referralCode || data.referralCount === undefined || data.hasSeenTutorial === undefined) {
         const updates: any = {};
         if (!data.referralCode) updates.referralCode = generateReferralCode();
         if (data.referralCount === undefined) updates.referralCount = 0;
+        if (data.hasSeenTutorial === undefined) updates.hasSeenTutorial = false;
         
         await updateDoc(userRef, updates);
         return { ...data, ...updates };
@@ -67,6 +68,12 @@ export const getUserData = async (uid: string): Promise<UserData | null> => {
     }
   } catch (error) { console.error("Error fetching user:", error); }
   return null;
+};
+
+export const completeTutorial = async (uid: string) => {
+  try {
+    await updateDoc(doc(db, 'users', uid.toString()), { hasSeenTutorial: true });
+  } catch (err) { console.error(err); }
 };
 
 export const addBotMessage = async (uid: string, text: string) => {
@@ -96,19 +103,20 @@ export const registerUser = async (uid: string, details: Partial<UserData>): Pro
       referralCode: generateReferralCode(),
       referralCount: 0,
       hasSubmittedCode: false,
+      hasSeenTutorial: false,
       createdAt: Date.now(),
     };
 
     await setDoc(doc(db, 'users', userId), newUser);
     
-    await addBotMessage(userId, `🎉 Welcome aboard, ${details.firstName}!`);
-    await addBotMessage(userId, `💰 I've credited ${WELCOME_BONUS_BASE} coins to your wallet.`);
-    await addBotMessage(userId, `💡 Use a 4-digit referral code in the 'Invite' tab for +${REFERRAL_BONUS} bonus!`);
+    await addBotMessage(userId, `🎉 স্বাগতম, ${details.firstName}!`);
+    await addBotMessage(userId, `💰 আপনার ওয়ালেটে ${WELCOME_BONUS_BASE} কয়েন বোনাস দেওয়া হয়েছে।`);
+    await addBotMessage(userId, `💡 ইনভাইট ট্যাব থেকে বন্ধুদের ইনভাইট করলে পাবেন +${REFERRAL_BONUS} কয়েন!`);
     
     return newUser;
   } catch (error: any) {
     console.error("Registration error:", error);
-    return { uid: userId, balance: 0, total_watched: 0, referred_by: null, createdAt: Date.now(), referralCode: '0000', referralCount: 0 };
+    return { uid: userId, balance: 0, total_watched: 0, referred_by: null, createdAt: Date.now(), referralCode: '0000', referralCount: 0, hasSeenTutorial: true };
   }
 };
 
@@ -119,45 +127,42 @@ export const submitReferralCode = async (uid: string, shortCode: string): Promis
     
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) return { success: false, message: "User not found." };
+    if (!userSnap.exists()) return { success: false, message: "ইউজার পাওয়া যায়নি।" };
     
     const userData = userSnap.data() as UserData;
     if (userData.referred_by || userData.hasSubmittedCode) {
-      return { success: false, message: "You can only use a code once." };
+      return { success: false, message: "আপনি ইতিমধ্যে কোড ব্যবহার করেছেন।" };
     }
 
     if (userData.referralCode === cleanCode) {
-      return { success: false, message: "You cannot use your own code." };
+      return { success: false, message: "নিজের কোড নিজে ব্যবহার করা যাবে না।" };
     }
 
-    // Find referrer by short code
     const q = query(collection(db, 'users'), where('referralCode', '==', cleanCode), limit(1));
     const snap = await getDocs(q);
     
-    if (snap.empty) return { success: false, message: "Invalid Code." };
+    if (snap.empty) return { success: false, message: "ভুল কোড।" };
 
     const referrerDoc = snap.docs[0];
     const referrerId = referrerDoc.id;
     const referrerRef = doc(db, 'users', referrerId);
 
-    // Update Referrer
     await updateDoc(referrerRef, { 
       balance: increment(REFERRAL_BONUS),
       referralCount: increment(1)
     });
-    await addBotMessage(referrerId, `🎊 Someone used your code! +${REFERRAL_BONUS} coins added.`);
+    await addBotMessage(referrerId, `🎊 কেউ আপনার কোড ব্যবহার করেছে! +${REFERRAL_BONUS} কয়েন জমা হয়েছে।`);
 
-    // Update User
     await updateDoc(userRef, { 
       balance: increment(REFERRAL_BONUS),
       referred_by: referrerId,
       hasSubmittedCode: true
     });
-    await addBotMessage(userId, `✅ +${REFERRAL_BONUS} coins for using a referral code!`);
+    await addBotMessage(userId, `✅ রেফারেল কোড ব্যবহারের জন্য +${REFERRAL_BONUS} কয়েন বোনাস পেয়েছেন!`);
 
-    return { success: true, message: "Success! +500 Coins added." };
+    return { success: true, message: "সফল হয়েছে! +৫০০ কয়েন জমা হয়েছে।" };
   } catch (e) {
-    return { success: false, message: "System error." };
+    return { success: false, message: "সিস্টেম এরর।" };
   }
 };
 
@@ -179,7 +184,7 @@ export const updateAdWatch = async (uid: string, reward: number, referredBy: str
       total_watched: increment(1)
     });
     
-    await addBotMessage(uid, `✅ +${reward} coins for watching an ad!`);
+    await addBotMessage(uid, `✅ বিজ্ঞাপন দেখার জন্য +${reward} কয়েন পেয়েছেন!`);
 
     if (referredBy) {
       const commission = Math.floor(reward * 0.1);
@@ -216,7 +221,7 @@ export const createWithdrawal = async (request: WithdrawalRequest) => {
   try {
     await addDoc(collection(db, 'withdrawals'), request);
     await updateDoc(doc(db, 'users', request.user_id), { balance: increment(-request.amount) });
-    await addBotMessage(request.user_id, `💸 Withdrawal request submitted: ${request.amount} coins.`);
+    await addBotMessage(request.user_id, `💸 উইথড্রাল রিকোয়েস্ট জমা দেওয়া হয়েছে: ${request.amount} কয়েন।`);
   } catch (err) { console.error(err); }
 };
 
@@ -248,9 +253,9 @@ export const updateWithdrawalStatus = async (id: string, status: 'completed' | '
     
     if (status === 'rejected') {
       await updateDoc(doc(db, 'users', userId), { balance: increment(amount) });
-      await addBotMessage(userId, `❌ Withdrawal rejected. ${amount} coins returned to balance.`);
+      await addBotMessage(userId, `❌ আপনার উইথড্রাল রিকোয়েস্ট বাতিল করা হয়েছে। ${amount} কয়েন ফেরত দেওয়া হয়েছে।`);
     } else {
-      await addBotMessage(userId, `✅ Withdrawal request of ${amount} coins marked as completed.`);
+      await addBotMessage(userId, `✅ আপনার ${amount} কয়েন উইথড্রাল রিকোয়েস্ট সফলভাবে সম্পন্ন হয়েছে।`);
     }
   } catch (e) { throw e; }
 };

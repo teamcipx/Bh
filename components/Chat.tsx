@@ -30,7 +30,7 @@ const Chat: React.FC<ChatProps> = ({ user }) => {
   }, [messages]);
 
   const formatTime = (ts: number) => {
-    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(ts).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -45,8 +45,8 @@ const Chat: React.FC<ChatProps> = ({ user }) => {
             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full"></div>
           </div>
           <div>
-            <h2 className="font-black text-sm text-gray-800 dark:text-white">CoinEarn AI Bot</h2>
-            <p className="text-[10px] text-green-500 font-bold uppercase tracking-widest">Active System Status</p>
+            <h2 className="font-black text-sm text-gray-800 dark:text-white">CoinEarn AI বট</h2>
+            <p className="text-[10px] text-green-500 font-bold uppercase tracking-widest">সিস্টেম একটিভ আছে</p>
           </div>
         </div>
       </div>
@@ -62,7 +62,7 @@ const Chat: React.FC<ChatProps> = ({ user }) => {
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-300">
-            <p className="text-xs font-bold uppercase tracking-widest">Awaiting Messages...</p>
+            <p className="text-xs font-bold uppercase tracking-widest">বার্তার জন্য অপেক্ষা করুন...</p>
           </div>
         ) : (
           messages.map((m, i) => (
@@ -84,7 +84,7 @@ const Chat: React.FC<ChatProps> = ({ user }) => {
       {/* Footer Disclaimer */}
       <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
         <div className="bg-gray-50 dark:bg-black/20 px-6 py-3 rounded-2xl text-[9px] text-center text-gray-400 font-black uppercase tracking-[0.2em]">
-          Read-Only Notification System
+          সিস্টেম নোটিফিকেশন সিস্টেম (রিড-অনলি)
         </div>
       </div>
     </div>

@@ -16,7 +16,6 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Fallback for UI if code hasn't synced yet
   const displayCode = user.referralCode || '----';
 
   const fetchHistory = useCallback(async () => {
@@ -41,14 +40,14 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
     navigator.clipboard.writeText(user.referralCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    showAlert("Referral Code Copied!");
+    showAlert("রেফারেল কোড কপি করা হয়েছে!");
   };
 
   const handleShare = () => {
     if (!user.referralCode) return;
     hapticFeedback();
     const link = `https://t.me/AdearnX_bot/app`;
-    const text = `Join CoinEarn and start earning! 💸\n\nUse my 4-digit code: ${user.referralCode}\nGet +500 coins instantly!`;
+    const text = `CoinEarn-এ জয়েন করে প্রতিদিন কয়েন ইনকাম করুন! 💸\n\nআমার রেফার কোড ব্যবহার করুন: ${user.referralCode}\nসাথে সাথে পাবেন +৫০০ কয়েন বোনাস!`;
     try {
       window.Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
     } catch (e) {
@@ -59,7 +58,7 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
   const handleSubmitCode = async () => {
     if (!inputCode.trim()) return;
     if (inputCode.trim().length !== 4) {
-      showAlert("Code must be 4 digits.");
+      showAlert("কোডটি ৪ ডিজিটের হতে হবে।");
       return;
     }
     setIsSubmitting(true);
@@ -73,7 +72,7 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
         await fetchHistory(); 
       }
     } catch (err) {
-      showAlert("Submission failed.");
+      showAlert("জমা দেওয়া সম্ভব হয়নি।");
     } finally {
       setIsSubmitting(false);
     }
@@ -85,14 +84,14 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
       <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
         <h3 className="text-sm font-black uppercase tracking-widest text-blue-600 mb-5 flex items-center gap-2">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          Invite & Earn
+          ইনভাইট এবং ইনকাম
         </h3>
         <div className="space-y-5">
           {[
-            { step: "1", title: "Share 4-Digit Code", desc: "Share your unique 4-digit referral code with friends." },
-            { step: "2", title: "Friend Redeems", desc: "Your friend enters the code. Only 1 code can be redeemed per user." },
-            { step: "3", title: "Instant 500", desc: "Both get +500 coins instantly! You need 3 refers to withdraw." },
-            { step: "4", title: "10% Forever", desc: "Earn 10% commission on every ad they watch, every day." }
+            { step: "১", title: "কোড শেয়ার করুন", desc: "আপনার ৪ ডিজিটের ইউনিক কোডটি বন্ধুদের শেয়ার করুন।" },
+            { step: "২", title: "বন্ধু কোড ব্যবহার করবে", desc: "আপনার বন্ধু ইনভাইট ট্যাবে গিয়ে কোডটি ব্যবহার করবে।" },
+            { step: "৩", title: "সাথে সাথে ৫০০ কয়েন", desc: "উভয়েই সাথে সাথে +৫০০ কয়েন বোনাস পাবেন!" },
+            { step: "৪", title: "১০% লাইফটাইম", desc: "বন্ধুদের প্রতিটি অ্যাড থেকে আপনি পাবেন ১০% কমিশন।" }
           ].map((item, idx) => (
             <div key={idx} className="flex gap-4 items-start">
               <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">
@@ -110,7 +109,7 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
       {/* Code Card */}
       <div className="bg-gradient-to-br from-blue-700 via-indigo-600 to-indigo-500 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group">
         <div className="relative z-10 text-center">
-          <p className="text-[9px] font-black uppercase tracking-[0.4em] opacity-60 mb-4">Your Invitation Code</p>
+          <p className="text-[9px] font-black uppercase tracking-[0.4em] opacity-60 mb-4">আপনার ইনভাইট কোড</p>
           <div className="bg-white/10 backdrop-blur-xl rounded-[2rem] py-6 px-4 border border-white/20 shadow-inner flex flex-col items-center">
             <h2 className="text-4xl font-black tracking-[0.5em] font-mono select-all mb-4 pl-4">{displayCode}</h2>
             <div className="flex gap-2 w-full">
@@ -118,13 +117,13 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
                 onClick={handleCopyCode}
                 className="flex-1 py-3.5 bg-white text-blue-600 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg"
               >
-                {copied ? 'Copied!' : 'Copy Code'}
+                {copied ? 'কপি হয়েছে' : 'কোড কপি'}
               </button>
               <button 
                 onClick={handleShare}
                 className="flex-1 py-3.5 bg-indigo-900/40 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 border border-white/10"
               >
-                Share
+                শেয়ার
               </button>
             </div>
           </div>
@@ -135,14 +134,14 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
       {/* Redeem Section */}
       {!user.hasSubmittedCode && !user.referred_by && (
         <div className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm animate-in zoom-in duration-300">
-          <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Redeem Bonus</h3>
+          <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">বোনাস সংগ্রহ করুন</h3>
           <div className="flex gap-2">
             <input 
               type="number" 
               maxLength={4}
               value={inputCode}
               onChange={(e) => setInputCode(e.target.value.slice(0, 4))}
-              placeholder="Enter 4-digit code"
+              placeholder="৪ ডিজিটের কোড দিন"
               className="flex-1 bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-gray-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button 
@@ -150,21 +149,21 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
               disabled={isSubmitting || inputCode.length !== 4}
               className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest disabled:opacity-50 active:scale-95 transition-all"
             >
-              Claim
+              নিশ্চিত করুন
             </button>
           </div>
-          <p className="text-[9px] font-bold text-blue-500 mt-4 leading-relaxed italic uppercase opacity-70">One-time redeem for +500 coins bonus.</p>
+          <p className="text-[9px] font-bold text-blue-500 mt-4 leading-relaxed italic uppercase opacity-70">একবার ব্যবহারের জন্য +৫০০ কয়েন বোনাস।</p>
         </div>
       )}
 
       {/* Stats Table */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-gray-50 dark:bg-gray-900/40 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
-          <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Total Referrals</p>
+          <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">মোট রেফারাল</p>
           <p className="text-xl font-black text-blue-600">{user.referralCount || 0}</p>
         </div>
         <div className="bg-gray-50 dark:bg-gray-900/40 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 text-right">
-          <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Total Bonus</p>
+          <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">মোট বোনাস</p>
           <p className="text-xl font-black text-green-600">{((user.referralCount || 0) * 500).toLocaleString()}</p>
         </div>
       </div>
@@ -172,15 +171,15 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
       {/* Team List */}
       <div>
         <div className="flex items-center justify-between mb-4 px-2">
-          <h3 className="text-lg font-black tracking-tight">Your Team</h3>
-          <button onClick={fetchHistory} className={`text-[10px] font-black uppercase text-blue-500 ${loading ? 'animate-pulse' : ''}`}>Sync</button>
+          <h3 className="text-lg font-black tracking-tight">আপনার টিম</h3>
+          <button onClick={fetchHistory} className={`text-[10px] font-black uppercase text-blue-500 ${loading ? 'animate-pulse' : ''}`}>রিফ্রেশ</button>
         </div>
 
         {loading ? (
           <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
         ) : history.length === 0 ? (
           <div className="bg-white dark:bg-gray-900/40 p-10 rounded-[2rem] border-2 border-dashed border-gray-100 dark:border-gray-800 text-center">
-            <p className="text-gray-300 font-black uppercase text-[10px] tracking-widest">No friends invited yet</p>
+            <p className="text-gray-300 font-black uppercase text-[10px] tracking-widest">এখনো কাউকে ইনভাইট করেননি</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -192,11 +191,11 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
                   </div>
                   <div>
                     <h4 className="text-[11px] font-black text-gray-800 dark:text-gray-100">{member.firstName}</h4>
-                    <p className="text-[8px] text-gray-400 font-bold font-mono">CODE: {member.referralCode || '----'}</p>
+                    <p className="text-[8px] text-gray-400 font-bold font-mono">কোড: {member.referralCode || '----'}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[9px] font-black text-green-500 uppercase">+500</p>
+                  <p className="text-[9px] font-black text-green-500 uppercase">+৫০০</p>
                   <p className="text-[8px] text-gray-300 font-medium">{new Date(member.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>

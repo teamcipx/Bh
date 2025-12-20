@@ -10,6 +10,7 @@ export interface UserData {
   referralCode: string; // The 4-digit short code
   referralCount: number; // Number of people this user has referred
   hasSubmittedCode?: boolean;
+  hasSeenTutorial?: boolean;
   createdAt: number;
 }
 
