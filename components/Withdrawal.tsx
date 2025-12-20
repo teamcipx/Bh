@@ -18,6 +18,15 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
   const [history, setHistory] = useState<WithdrawalRequest[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
 
+  // Check conditions
+  const referralCount = user.referralCount || 0;
+  const accountAgeHours = (Date.now() - user.createdAt) / (1000 * 60 * 60);
+  const isAccountDayOld = accountAgeHours >= 24;
+  const hasMinRefers = referralCount >= 3;
+  const hasMinBalance = user.balance >= settings.min_withdrawal;
+
+  const canWithdraw = hasMinRefers && isAccountDayOld && hasMinBalance;
+
   const fetchHistory = async () => {
     setLoadingHistory(true);
     try {
@@ -32,17 +41,31 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
 
   useEffect(() => {
     fetchHistory();
-    // Refresh history periodically
-    const interval = setInterval(fetchHistory, 10000);
+    const interval = setInterval(fetchHistory, 15000);
     return () => clearInterval(interval);
   }, [user.uid]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const numAmount = parseInt(amount);
-
-    if (isNaN(numAmount) || numAmount < settings.min_withdrawal) {
+    
+    if (!hasMinBalance) {
       showAlert(`Minimum withdrawal is ${settings.min_withdrawal} coins.`);
+      return;
+    }
+
+    if (!hasMinRefers) {
+      showAlert("You need at least 3 successful referrals to withdraw.");
+      return;
+    }
+
+    if (!isAccountDayOld) {
+      showAlert("Your account must be at least 24 hours old.");
+      return;
+    }
+
+    const numAmount = parseInt(amount);
+    if (isNaN(numAmount) || numAmount < settings.min_withdrawal) {
+      showAlert(`Min: ${settings.min_withdrawal}`);
       return;
     }
 
@@ -52,7 +75,7 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
     }
 
     if (!details) {
-      showAlert("Please enter payment details.");
+      showAlert("Enter payment details.");
       return;
     }
 
@@ -68,13 +91,13 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
         status: 'pending',
         timestamp: Date.now()
       });
-      showAlert("Withdrawal request submitted successfully!");
+      showAlert("Request submitted!");
       setAmount('');
       setDetails('');
       refreshUser();
       fetchHistory(); 
     } catch (err) {
-      showAlert("Error submitting request. Try again.");
+      showAlert("Submission failed.");
     } finally {
       setIsSubmitting(false);
     }
@@ -97,96 +120,92 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
     });
   };
 
-  // 1000 Coins = 10 BDT logic (100 coins = 1 BDT)
-  const bdtValue = (user.balance / 100).toFixed(2);
   const requestBdtValue = amount ? (parseInt(amount) / 100).toFixed(2) : "0.00";
 
   return (
     <div className="p-4 pb-24">
-      {/* Balance Card with BDT conversion */}
-      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-[2rem] p-8 text-white mb-6 shadow-xl relative overflow-hidden">
+      {/* Balance Card */}
+      <div className="bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 rounded-[2.5rem] p-8 text-white mb-6 shadow-xl relative overflow-hidden">
         <div className="relative z-10">
-          <h2 className="text-sm font-bold opacity-60 uppercase tracking-widest">Available Balance</h2>
+          <h2 className="text-sm font-bold opacity-60 uppercase tracking-widest">Wallet Balance</h2>
           <div className="flex items-end gap-3 mt-2">
-            <span className="text-4xl font-black">{user.balance.toLocaleString()}</span>
-            <span className="text-sm font-black opacity-30 uppercase mb-1">Coins</span>
+            <span className="text-5xl font-black">{user.balance.toLocaleString()}</span>
+            <span className="text-sm font-black opacity-30 uppercase mb-2">Coins</span>
           </div>
           <div className="mt-4 flex items-center gap-2">
-            <span className="text-2xl font-black text-green-400">৳ {bdtValue}</span>
-            <span className="text-[10px] font-black opacity-50 uppercase">BDT EQUIVALENT</span>
-          </div>
-          
-          <div className="mt-6 flex flex-wrap gap-2">
-            <p className="text-[9px] font-black uppercase tracking-widest px-3 py-1 bg-white/10 rounded-full border border-white/10 text-yellow-400">
-              Min Goal: {settings.min_withdrawal} Coins
-            </p>
-            <p className="text-[9px] font-black uppercase tracking-widest px-3 py-1 bg-green-500/20 rounded-full border border-green-500/30 text-green-300">
-              Rate: 1000 Coins = 10 BDT
-            </p>
+            <span className="text-2xl font-black text-green-400">৳ {(user.balance / 100).toFixed(2)}</span>
+            <span className="text-[10px] font-black opacity-50 uppercase">BDT</span>
           </div>
         </div>
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
+        <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl"></div>
       </div>
 
-      {/* Withdrawal Form */}
-      <div className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 mb-8 shadow-sm">
-        <h3 className="text-sm font-black uppercase tracking-widest mb-6 text-gray-800 dark:text-white">New Request</h3>
+      {/* Withdrawal Conditions Checklist */}
+      <div className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 mb-6 shadow-sm">
+        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Security Checklist</h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Min. Balance ({settings.min_withdrawal})</span>
+            {hasMinBalance ? <CheckIcon /> : <CrossIcon />}
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">3 Successful Referrals ({referralCount}/3)</span>
+            {hasMinRefers ? <CheckIcon /> : <CrossIcon />}
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Account 24h Old</span>
+            {isAccountDayOld ? <CheckIcon /> : <CrossIcon />}
+          </div>
+        </div>
+      </div>
+
+      {/* Form Section */}
+      <div className={`bg-white dark:bg-gray-900 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 mb-8 shadow-sm transition-opacity ${!canWithdraw ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
+        <h3 className="text-sm font-black uppercase tracking-widest mb-6 text-gray-800 dark:text-white">Cash Out</h3>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div>
-            <label className="block text-[10px] font-black uppercase text-gray-400 mb-3 tracking-wider">Select Method</label>
-            <div className="grid grid-cols-2 gap-2">
-              {['bkash', 'binance', 'nagad', 'usdt'].map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMethod(m)}
-                  className={`py-3.5 rounded-2xl border-2 transition-all font-black uppercase text-[10px] tracking-widest ${
-                    method === m 
-                      ? 'border-blue-600 bg-blue-50 text-blue-600 dark:bg-blue-900/20' 
-                      : 'border-transparent bg-gray-50 dark:bg-black/20 text-gray-400'
-                  }`}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
+          <div className="grid grid-cols-2 gap-2">
+            {['bkash', 'binance', 'nagad', 'usdt'].map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMethod(m)}
+                className={`py-3 rounded-xl border-2 transition-all font-black uppercase text-[10px] tracking-widest ${
+                  method === m 
+                    ? 'border-blue-600 bg-blue-50 text-blue-600 dark:bg-blue-900/20' 
+                    : 'border-transparent bg-gray-50 dark:bg-black/20 text-gray-400'
+                }`}
+              >
+                {m}
+              </button>
+            ))}
           </div>
 
           <div>
-            <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 tracking-wider">Amount (Coins)</label>
-            <div className="relative">
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder={`Min ${settings.min_withdrawal}`}
-                className="w-full bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 text-lg font-black pr-24"
-                required
-              />
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-right">
-                <p className="text-[10px] font-black text-green-500">৳ {requestBdtValue}</p>
-                <p className="text-[8px] font-bold text-gray-400 uppercase">BDT</p>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 tracking-wider">Receiver Number / Wallet</label>
             <input
-              type="text"
-              value={details}
-              onChange={(e) => setDetails(e.target.value)}
-              placeholder="e.g. 017XXXXXXXX"
-              className="w-full bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 text-sm font-bold"
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder={`Coins (Min ${settings.min_withdrawal})`}
+              className="w-full bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 text-lg font-black"
               required
             />
+            <p className="text-[10px] font-bold text-green-500 mt-2 ml-2">Estimated: ৳ {requestBdtValue} BDT</p>
           </div>
+
+          <input
+            type="text"
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+            placeholder="Account Number / Wallet"
+            className="w-full bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 text-sm font-bold"
+            required
+          />
 
           <button
             type="submit"
-            disabled={isSubmitting || user.balance < settings.min_withdrawal}
+            disabled={isSubmitting || !canWithdraw}
             className={`w-full py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl mt-2 flex items-center justify-center gap-3 transition-all active:scale-95 ${
-              isSubmitting || user.balance < settings.min_withdrawal
+              isSubmitting || !canWithdraw
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
                 : 'bg-blue-600 text-white shadow-blue-500/20'
             }`}
@@ -194,66 +213,35 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
             {isSubmitting ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
             ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                Withdraw Now
-              </>
+              'Withdraw Now'
             )}
           </button>
         </form>
       </div>
 
-      {/* History Section */}
+      {/* History */}
       <div className="mt-8">
-        <div className="flex items-center justify-between mb-6 px-2">
-          <h3 className="text-xl font-black tracking-tight">Withdraw History</h3>
-          <button 
-            onClick={fetchHistory}
-            className="text-blue-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 active:opacity-50"
-          >
-            <svg className={`w-3 h-3 ${loadingHistory ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh
-          </button>
-        </div>
-
+        <h3 className="text-xl font-black tracking-tight mb-6 px-2">Withdraw History</h3>
         {loadingHistory && history.length === 0 ? (
-          <div className="flex justify-center py-10">
-            <div className="w-8 h-8 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin"></div>
-          </div>
+          <div className="flex justify-center py-10"><div className="w-8 h-8 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin"></div></div>
         ) : history.length === 0 ? (
-          <div className="bg-white dark:bg-gray-900/50 p-12 rounded-[2.5rem] border-2 border-dashed border-gray-100 dark:border-gray-800 text-center">
-            <svg className="w-12 h-12 mx-auto text-gray-200 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-            <p className="text-gray-300 font-black uppercase text-[10px] tracking-widest">No withdrawal history</p>
+          <div className="bg-white dark:bg-gray-900/50 p-12 rounded-[2.5rem] border-2 border-dashed border-gray-100 dark:border-gray-800 text-center text-gray-300 font-black uppercase text-[10px] tracking-widest">
+            Empty History
           </div>
         ) : (
           <div className="space-y-3">
             {history.map((req) => (
               <div 
                 key={req.id} 
-                className="bg-white dark:bg-gray-900 p-5 rounded-[1.5rem] border border-gray-100 dark:border-gray-800 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300"
+                className="bg-white dark:bg-gray-900 p-5 rounded-[1.5rem] border border-gray-100 dark:border-gray-800 flex items-center justify-between shadow-sm"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-black/20 flex items-center justify-center text-blue-600 border border-gray-100 dark:border-gray-800 shadow-inner">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-black text-sm">{req.amount.toLocaleString()}</p>
+                    <span className="text-[8px] bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full uppercase font-black text-blue-600">{req.method}</span>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="font-black text-sm">{req.amount.toLocaleString()}</p>
-                      <span className="text-[8px] bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full uppercase font-black text-blue-600">
-                        {req.method}
-                      </span>
-                    </div>
-                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter truncate max-w-[120px]">
-                      {req.details}
-                    </p>
-                    <p className="text-[8px] text-gray-300 mt-1 font-medium">{formatDate(req.timestamp)}</p>
-                  </div>
+                  <p className="text-[9px] text-gray-400 font-bold uppercase truncate max-w-[150px]">{req.details}</p>
+                  <p className="text-[8px] text-gray-300 mt-1">{formatDate(req.timestamp)}</p>
                 </div>
                 <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-current/20 ${getStatusColor(req.status)}`}>
                   {req.status}
@@ -266,5 +254,17 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
     </div>
   );
 };
+
+const CheckIcon = () => (
+  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white">
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
+  </div>
+);
+
+const CrossIcon = () => (
+  <div className="w-5 h-5 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center text-red-600">
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M6 18L18 6M6 6l12 12" /></svg>
+  </div>
+);
 
 export default Withdrawal;

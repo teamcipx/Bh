@@ -6,7 +6,9 @@ export interface UserData {
   username?: string;
   balance: number;
   total_watched: number;
-  referred_by: string | null;
+  referred_by: string | null; // UID of the person who referred this user
+  referralCode: string; // The 4-digit short code
+  referralCount: number; // Number of people this user has referred
   hasSubmittedCode?: boolean;
   createdAt: number;
 }

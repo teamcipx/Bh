@@ -42,6 +42,10 @@ const DEFAULT_SETTINGS: AppSettings = {
 const WELCOME_BONUS_BASE = 1000;
 const REFERRAL_BONUS = 500;
 
+const generateReferralCode = () => {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+};
+
 export const getUserData = async (uid: string): Promise<UserData | null> => {
   try {
     const userRef = doc(db, 'users', uid.toString());
@@ -75,6 +79,8 @@ export const registerUser = async (uid: string, details: Partial<UserData>): Pro
       balance: WELCOME_BONUS_BASE,
       total_watched: 0,
       referred_by: null,
+      referralCode: generateReferralCode(),
+      referralCount: 0,
       hasSubmittedCode: false,
       createdAt: Date.now(),
     };
@@ -83,21 +89,19 @@ export const registerUser = async (uid: string, details: Partial<UserData>): Pro
     
     await addBotMessage(userId, `🎉 Welcome aboard, ${details.firstName}!`);
     await addBotMessage(userId, `💰 I've credited ${WELCOME_BONUS_BASE} coins to your wallet.`);
-    await addBotMessage(userId, `💡 Use a referral code in the 'Invite' tab for +${REFERRAL_BONUS} bonus!`);
+    await addBotMessage(userId, `💡 Use a 4-digit referral code in the 'Invite' tab for +${REFERRAL_BONUS} bonus!`);
     
     return newUser;
   } catch (error: any) {
     console.error("Registration error:", error);
-    return { uid: userId, balance: 0, total_watched: 0, referred_by: null, createdAt: Date.now() };
+    return { uid: userId, balance: 0, total_watched: 0, referred_by: null, createdAt: Date.now(), referralCode: '0000', referralCount: 0 };
   }
 };
 
-export const submitReferralCode = async (uid: string, code: string): Promise<{success: boolean, message: string}> => {
+export const submitReferralCode = async (uid: string, shortCode: string): Promise<{success: boolean, message: string}> => {
   try {
     const userId = uid.toString();
-    const referrerId = code.trim();
-    
-    if (referrerId === userId) return { success: false, message: "You cannot use your own code." };
+    const cleanCode = shortCode.trim();
     
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
@@ -105,16 +109,31 @@ export const submitReferralCode = async (uid: string, code: string): Promise<{su
     
     const userData = userSnap.data() as UserData;
     if (userData.referred_by || userData.hasSubmittedCode) {
-      return { success: false, message: "Already applied a code." };
+      return { success: false, message: "You can only use a code once." };
     }
 
-    const referrerRef = doc(db, 'users', referrerId);
-    const referrerSnap = await getDoc(referrerRef);
-    if (!referrerSnap.exists()) return { success: false, message: "Invalid Code." };
+    if (userData.referralCode === cleanCode) {
+      return { success: false, message: "You cannot use your own code." };
+    }
 
-    await updateDoc(referrerRef, { balance: increment(REFERRAL_BONUS) });
+    // Find referrer by short code
+    const q = query(collection(db, 'users'), where('referralCode', '==', cleanCode), limit(1));
+    const snap = await getDocs(q);
+    
+    if (snap.empty) return { success: false, message: "Invalid Code." };
+
+    const referrerDoc = snap.docs[0];
+    const referrerId = referrerDoc.id;
+    const referrerRef = doc(db, 'users', referrerId);
+
+    // Update Referrer
+    await updateDoc(referrerRef, { 
+      balance: increment(REFERRAL_BONUS),
+      referralCount: increment(1)
+    });
     await addBotMessage(referrerId, `🎊 Someone used your code! +${REFERRAL_BONUS} coins added.`);
 
+    // Update User
     await updateDoc(userRef, { 
       balance: increment(REFERRAL_BONUS),
       referred_by: referrerId,
@@ -189,11 +208,9 @@ export const createWithdrawal = async (request: WithdrawalRequest) => {
 
 export const getWithdrawalHistory = async (uid: string): Promise<WithdrawalRequest[]> => {
   try {
-    // Simplified query to avoid index requirements for testing
     const q = query(collection(db, 'withdrawals'), where('user_id', '==', uid.toString()));
     const snap = await getDocs(q);
     const results = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithdrawalRequest));
-    // Manual sort to ensure reliability
     return results.sort((a, b) => b.timestamp - a.timestamp);
   } catch (e) { 
     console.error("Error fetching withdrawal history:", e);
@@ -201,7 +218,6 @@ export const getWithdrawalHistory = async (uid: string): Promise<WithdrawalReque
   }
 };
 
-// Admin Specific
 export const getAllWithdrawals = async (): Promise<WithdrawalRequest[]> => {
   try {
     const q = query(collection(db, 'withdrawals'), limit(100));
@@ -217,7 +233,6 @@ export const updateWithdrawalStatus = async (id: string, status: 'completed' | '
     await updateDoc(ref, { status });
     
     if (status === 'rejected') {
-      // Return coins to user
       await updateDoc(doc(db, 'users', userId), { balance: increment(amount) });
       await addBotMessage(userId, `❌ Withdrawal rejected. ${amount} coins returned to balance.`);
     } else {
