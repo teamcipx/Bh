@@ -50,7 +50,21 @@ export const getUserData = async (uid: string): Promise<UserData | null> => {
   try {
     const userRef = doc(db, 'users', uid.toString());
     const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) return userSnap.data() as UserData;
+    if (userSnap.exists()) {
+      const data = userSnap.data() as UserData;
+      
+      // FIX: Handle users registered before the referralCode update
+      if (!data.referralCode || data.referralCount === undefined) {
+        const updates: any = {};
+        if (!data.referralCode) updates.referralCode = generateReferralCode();
+        if (data.referralCount === undefined) updates.referralCount = 0;
+        
+        await updateDoc(userRef, updates);
+        return { ...data, ...updates };
+      }
+      
+      return data;
+    }
   } catch (error) { console.error("Error fetching user:", error); }
   return null;
 };

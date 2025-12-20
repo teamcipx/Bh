@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { UserData } from '../types';
 import { getReferralHistory, submitReferralCode } from '../firebase';
-import { hapticFeedback, showAlert, shareApp } from '../telegram';
+import { hapticFeedback, showAlert } from '../telegram';
 
 interface ReferralProps {
   user: UserData;
@@ -15,6 +15,9 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
   const [inputCode, setInputCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Fallback for UI if code hasn't synced yet
+  const displayCode = user.referralCode || '----';
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
@@ -33,6 +36,7 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
   }, [fetchHistory]);
 
   const handleCopyCode = () => {
+    if (!user.referralCode) return;
     hapticFeedback();
     navigator.clipboard.writeText(user.referralCode);
     setCopied(true);
@@ -41,8 +45,8 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
   };
 
   const handleShare = () => {
+    if (!user.referralCode) return;
     hapticFeedback();
-    // Pass referralCode instead of UID for sharing
     const link = `https://t.me/AdearnX_bot/app`;
     const text = `Join CoinEarn and start earning! 💸\n\nUse my 4-digit code: ${user.referralCode}\nGet +500 coins instantly!`;
     try {
@@ -108,7 +112,7 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
         <div className="relative z-10 text-center">
           <p className="text-[9px] font-black uppercase tracking-[0.4em] opacity-60 mb-4">Your Invitation Code</p>
           <div className="bg-white/10 backdrop-blur-xl rounded-[2rem] py-6 px-4 border border-white/20 shadow-inner flex flex-col items-center">
-            <h2 className="text-4xl font-black tracking-[0.5em] font-mono select-all mb-4 pl-4">{user.referralCode}</h2>
+            <h2 className="text-4xl font-black tracking-[0.5em] font-mono select-all mb-4 pl-4">{displayCode}</h2>
             <div className="flex gap-2 w-full">
               <button 
                 onClick={handleCopyCode}
@@ -188,7 +192,7 @@ const Referral: React.FC<ReferralProps> = ({ user, refreshUser }) => {
                   </div>
                   <div>
                     <h4 className="text-[11px] font-black text-gray-800 dark:text-gray-100">{member.firstName}</h4>
-                    <p className="text-[8px] text-gray-400 font-bold font-mono">CODE: {member.referralCode}</p>
+                    <p className="text-[8px] text-gray-400 font-bold font-mono">CODE: {member.referralCode || '----'}</p>
                   </div>
                 </div>
                 <div className="text-right">
