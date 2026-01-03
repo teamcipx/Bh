@@ -53,7 +53,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, refreshUser }) =>
         <div className="absolute inset-0 bg-gradient-to-t from-blue-900/80 to-transparent flex items-end p-6">
           <div className="text-white">
             <h3 className="font-black text-xl leading-tight">এলিট রিওয়ার্ডস<br/>প্রোগ্রাম</h3>
-            <p className="text-xs text-blue-200 mt-1">১০০০ কয়েন = ১০ টাকা (বিকাশ/নগদ)</p>
+            <p className="text-xs text-blue-200 mt-1">১০০০ কয়েন = ৮ টাকা (বিকাশ/নগদ)</p>
           </div>
         </div>
       </div>
