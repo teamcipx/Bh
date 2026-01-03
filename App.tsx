@@ -79,7 +79,7 @@ const App: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-[var(--tg-bg)] text-[var(--tg-text)] p-8 text-center">
         <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4 shadow-xl"></div>
-        <h1 className="text-2xl font-black tracking-tighter text-blue-600 animate-pulse">CoinEarn</h1>
+        <h1 className="text-2xl font-black tracking-tighter text-blue-600 animate-pulse">AdBot</h1>
         <p className="text-gray-400 mt-2 font-bold uppercase text-[10px] tracking-widest">লোডিং হচ্ছে...</p>
       </div>
     );
@@ -112,7 +112,7 @@ const App: React.FC = () => {
              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
           </div>
           <div>
-            <h1 className="text-lg font-black text-gray-900 dark:text-white leading-none tracking-tight">CoinEarn</h1>
+            <h1 className="text-lg font-black text-gray-900 dark:text-white leading-none tracking-tight">AdBot</h1>
             <div className="flex items-center gap-1 mt-1">
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
               <span className="text-[8px] font-black uppercase text-green-500 tracking-widest">লাইভ নেটওয়ার্ক</span>
