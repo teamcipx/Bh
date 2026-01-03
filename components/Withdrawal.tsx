@@ -132,7 +132,7 @@ const Withdrawal: React.FC<WithdrawalProps> = ({ user, settings, refreshUser }) 
             <span className="text-sm font-black opacity-30 uppercase mb-2">কয়েন</span>
           </div>
           <div className="mt-4 flex items-center gap-2">
-            <span className="text-2xl font-black text-green-400">৳ {(user.balance / 100).toFixed(2)}</span>
+            <span className="text-2xl font-black text-green-400">৳ {(user.balance / 80).toFixed(2)}</span>
             <span className="text-[10px] font-black opacity-50 uppercase">BDT মূল্য</span>
           </div>
         </div>
