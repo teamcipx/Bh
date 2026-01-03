@@ -39,7 +39,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, settings, refreshUser }) =>
   };
 
   const progress = Math.min(100, (user.balance / settings.min_withdrawal) * 100);
-  const bdtEquivalent = (user.balance / 100).toFixed(2);
+  const bdtEquivalent = (user.balance / 80).toFixed(2);
 
   return (
     <div className="flex flex-col gap-6 p-4 pb-24 animate-in fade-in duration-700">
